@@ -1,6 +1,6 @@
 # FAQ
 
-[Tutorial](Tutorial_en.md) | [Rule Engine](RuleEngine_en.md) | [GRL](GRL_en.md) | [RETE Algorithm](RETE_en.md) | [Functions](Function_en.md) | [Grule Events](GruleEvent_en.md) | [FAQ](FAQ_en.md)
+[Tutorial](Tutorial_en.md) | [Rule Engine](RuleEngine_en.md) | [GRL](GRL_en.md) | [RETE Algorithm](RETE_en.md) | [Functions](Function_en.md) | [FAQ](FAQ_en.md)
 
 ---
 
@@ -8,11 +8,11 @@
 
 **Question** : I got the following panic message when Grule engine is executed.
 
-```
+```Shell
 panic: GruleEngine successfully selected rule candidate for execution after 5000 cycles, this could possibly caused by rule entry(s) that keep added into execution pool but when executed it does not change any data in context. Please evaluate your rule entries "When" and "Then" scope. You can adjust the maximum cycle using GruleEngine.MaxCycle variable.
 ```
 
-**Answer** : The rule engine is done evaluating rule entries for choosing which one to execute in the 5000th time (5000 it the maximum execution cycle). You can change specify any positive number but if you doubt, you an leave it to 5000. When the rule set were evaluated that many times more to this number (the nax cycle) it will panic. To fix this issue, have to understand how rule engine works. The following simulation should help you understand the problem and know how to mitigate it.
+**Answer** : The rule engine is done evaluating rule entries for choosing which one to execute in the 5000th time (5000 it the maximum execution cycle). You can change specify any positive number but if you doubt, you can leave it to 5000. When the rule set were evaluated that many times more to this number (the max cycle) it will panic. To fix this issue, have to understand how rule engine works. The following simulation should help you understand the problem and know how to mitigate it.
 
 Consider this fact.
 
@@ -25,7 +25,7 @@ type Fact struct {
 
 The following rules defined.
 
-```text
+```Shell
 rule GiveCashback "Give cashback if payment is above 100" {
     When 
          F.Payment > 100
@@ -63,7 +63,7 @@ You should notice Grule execute the same rule again and again because the **WHEN
 
 One way for this solution is to change "GiveCashback" rule to something like :
 
-```text
+```Shell
 rule GiveCashback "Give cashback if payment is above 100" {
     When 
          F.Payment > 100 &&
@@ -76,7 +76,7 @@ rule GiveCashback "Give cashback if payment is above 100" {
 This way, after the 1st execution, the rule's WHEN is become invalid and not get executed again.
 Or ...
 
-```text
+```Shell
 rule GiveCashback "Give cashback if payment is above 100" {
     When 
          F.Payment > 100
@@ -107,4 +107,12 @@ There are so many database can potentially store Rule Entries. Creating adapter 
 **Question** : How many rule entry can be inserted into knowledgebase ?
 
 **Answer** : You can have as many rule entries you want. But there should be at least one minimum.
+
+---
+
+## 4. Fetch all rules valid for a given fact
+
+**Question** : How can I test which of rules I define is valid for a given Facts?
+
+**Answer** : You can use `engine.FetchMatchingRule` function, refer this [Matching Rules Doc](MatchingRules_en.md) for more info
 

@@ -18,10 +18,16 @@ var (
 	})
 )
 
-// BuiltInFunctions strucr hosts the built-in functions ready to invoke from the rule engine execution.
+// BuiltInFunctions struct hosts the built-in functions ready to invoke from the rule engine execution.
 type BuiltInFunctions struct {
 	Knowledge     *KnowledgeBase
 	WorkingMemory *WorkingMemory
+	DataContext   IDataContext
+}
+
+// Complete will cause the engine to stop processing further rules in the current cycle.
+func (gf *BuiltInFunctions) Complete() {
+	gf.DataContext.Complete()
 }
 
 // MakeTime will create a Time struct according to the argument values.

@@ -1,13 +1,11 @@
 package engine
 
 import (
+	"context"
 	"fmt"
 	"github.com/hyperjumptech/grule-rule-engine/ast"
 	"github.com/hyperjumptech/grule-rule-engine/builder"
-	"github.com/hyperjumptech/grule-rule-engine/events"
 	"github.com/hyperjumptech/grule-rule-engine/pkg"
-	"github.com/hyperjumptech/grule-rule-engine/pkg/eventbus"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"reflect"
 	"sort"
@@ -89,7 +87,6 @@ rule SetTime "When Distance Recorder time not set, set it." {
 )
 
 func TestGrule_Execute(t *testing.T) {
-	logrus.SetLevel(logrus.DebugLevel)
 	tc := &TestCar{
 		SpeedUp:        true,
 		Speed:          0,
@@ -101,34 +98,22 @@ func TestGrule_Execute(t *testing.T) {
 	}
 	dctx := ast.NewDataContext()
 	err := dctx.Add("TestCar", tc)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 	err = dctx.Add("DistanceRecord", dr)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 
 	lib := ast.NewKnowledgeLibrary()
 	rb := builder.NewRuleBuilder(lib)
 	err = rb.BuildRuleFromResource("Test", "0.1.1", pkg.NewBytesResource([]byte(rules)))
-	if err != nil {
-		t.Errorf("Got error : %v", err)
-		t.FailNow()
-	} else {
-		engine := NewGruleEngine()
-		kb := lib.NewKnowledgeBaseInstance("Test", "0.1.1")
-		start := time.Now()
-		err = engine.Execute(dctx, kb)
-		if err != nil {
-			t.Errorf("Got error : %v", err)
-			t.FailNow()
-		} else {
-			dur := time.Since(start)
-			t.Log(dr.TotalDistance)
-			t.Logf("Duration %d ms", dur.Milliseconds())
-		}
-	}
+	assert.NoError(t, err)
+	engine := NewGruleEngine()
+	kb := lib.NewKnowledgeBaseInstance("Test", "0.1.1")
+	start := time.Now()
+	err = engine.Execute(dctx, kb)
+	assert.NoError(t, err)
+	dur := time.Since(start)
+	t.Log(dr.TotalDistance)
+	t.Logf("Duration %d ms", dur.Milliseconds())
 }
 
 func getTypeOf(i interface{}) string {
@@ -137,79 +122,6 @@ func getTypeOf(i interface{}) string {
 		return fmt.Sprintf("*%s", t.Elem().Name())
 	}
 	return t.Name()
-}
-
-func TestGrule_ExecuteWithSubscribers(t *testing.T) {
-	logrus.SetLevel(logrus.InfoLevel)
-	tc := &TestCar{
-		SpeedUp:        true,
-		Speed:          0,
-		MaxSpeed:       100,
-		SpeedIncrement: 2,
-	}
-	dr := &DistanceRecorder{
-		TotalDistance: 0,
-	}
-	dctx := ast.NewDataContext()
-	err := dctx.Add("TestCar", tc)
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = dctx.Add("DistanceRecord", dr)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	ruleEntrySubscriber := eventbus.DefaultBrooker.GetSubscriber(events.RuleEntryEventTopic, func(i interface{}) error {
-		if i != nil && getTypeOf(i) == "*RuleEntryEvent" {
-			event := i.(*events.RuleEntryEvent)
-			if event.EventType == events.RuleEntryExecuteStartEvent {
-				log.Infof("Rule executed %s", event.RuleName)
-			}
-		} else if i != nil {
-			log.Infof("RuleEntry Subscriber, Receive type is %s ", getTypeOf(i))
-		}
-		return nil
-	})
-	ruleEntrySubscriber.Subscribe()
-
-	ruleEngineSubscriber := eventbus.DefaultBrooker.GetSubscriber(events.RuleEngineEventTopic, func(i interface{}) error {
-		if i != nil && getTypeOf(i) == "*RuleEngineEvent" {
-			event := i.(*events.RuleEngineEvent)
-			if event.EventType == events.RuleEngineEndEvent {
-				log.Infof("Engine finished in %d cycles", event.Cycle)
-			}
-		} else if i != nil {
-			log.Infof("RuleEngine Subscriber, Receive type is %s ", getTypeOf(i))
-		}
-		return nil
-	})
-	ruleEngineSubscriber.Subscribe()
-
-	//f := func(r *ast.RuleEntry) {
-	//	log.Debugf("Now executing rule %s", r.Name)
-	//}
-
-	lib := ast.NewKnowledgeLibrary()
-	rb := builder.NewRuleBuilder(lib)
-	err = rb.BuildRuleFromResource("Test", "0.1.1", pkg.NewBytesResource([]byte(rules)))
-	if err != nil {
-		t.Errorf("Got error : %v", err)
-		t.FailNow()
-	} else {
-		engine := NewGruleEngine()
-		kb := lib.NewKnowledgeBaseInstance("Test", "0.1.1")
-		start := time.Now()
-		err = engine.Execute(dctx, kb)
-		if err != nil {
-			t.Errorf("Got error : %v", err)
-			t.FailNow()
-		} else {
-			dur := time.Since(start)
-			t.Log(dr.TotalDistance)
-			t.Logf("Duration %d ms", dur.Milliseconds())
-		}
-	}
 }
 
 func TestEmptyValueEquality(t *testing.T) {
@@ -249,7 +161,6 @@ const complexRule1 = `rule ComplexRule "test complex rule" salience 10 {
 }`
 
 func TestEngine_ComplexRule1(t *testing.T) {
-
 	ts := &TestStruct{
 		Param1: true,
 		Param2: true,
@@ -259,9 +170,7 @@ func TestEngine_ComplexRule1(t *testing.T) {
 
 	dctx := ast.NewDataContext()
 	err := dctx.Add("TestStruct", ts)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 
 	lib := ast.NewKnowledgeLibrary()
 	rb := builder.NewRuleBuilder(lib)
@@ -296,9 +205,7 @@ func TestEngine_ComplexRule2(t *testing.T) {
 
 	dctx := ast.NewDataContext()
 	err := dctx.Add("TestStruct", ts)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 
 	lib := ast.NewKnowledgeLibrary()
 	rb := builder.NewRuleBuilder(lib)
@@ -334,9 +241,7 @@ func TestEngine_ComplexRule3(t *testing.T) {
 
 	dctx := ast.NewDataContext()
 	err := dctx.Add("TestStruct", ts)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 
 	lib := ast.NewKnowledgeLibrary()
 	rb := builder.NewRuleBuilder(lib)
@@ -373,9 +278,7 @@ func TestEngine_ComplexRule4(t *testing.T) {
 
 	dctx := ast.NewDataContext()
 	err := dctx.Add("TestStruct", ts)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 
 	lib := ast.NewKnowledgeLibrary()
 	rb := builder.NewRuleBuilder(lib)
@@ -404,9 +307,7 @@ func TestEngine_OperatorPrecedence(t *testing.T) {
 
 	dctx := ast.NewDataContext()
 	err := dctx.Add("TestStruct", ts)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 
 	lib := ast.NewKnowledgeLibrary()
 	rb := builder.NewRuleBuilder(lib)
@@ -469,4 +370,245 @@ And another`
 
 	assert.True(t, es.Result1)
 	assert.True(t, es.Result2)
+}
+
+type Sleeper struct {
+	Count int
+}
+
+func (s *Sleeper) SleepMore() {
+	time.Sleep(1 * time.Second)
+}
+
+func TestGruleEngine_ExecuteWithContext(t *testing.T) {
+	ts := &Sleeper{}
+
+	dctx := ast.NewDataContext()
+	err := dctx.Add("TS", ts)
+	assert.NoError(t, err)
+
+	lib := ast.NewKnowledgeLibrary()
+	rb := builder.NewRuleBuilder(lib)
+	err = rb.BuildRuleFromResource("TestTimer", "0.1.1", pkg.NewBytesResource([]byte(`
+rule KeepSleep "test string escaping" salience 10 {
+    when
+        TS.Count < 4
+    then
+        TS.Count = TS.Count + 1;
+		TS.SleepMore();
+}
+`)))
+	assert.NoError(t, err)
+	kb := lib.NewKnowledgeBaseInstance("TestTimer", "0.1.1")
+	engine := NewGruleEngine()
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	err = engine.ExecuteWithContext(ctx, dctx, kb)
+	if err == nil {
+		t.Logf("Should have failed since its was timeout")
+		t.Fail()
+	} else {
+		t.Logf("got %s", err.Error())
+	}
+}
+
+type Fact struct {
+	NetAmount float32
+	Distance  int32
+	Duration  int32
+	Result    bool
+}
+
+const duplicateRules = `rule  DuplicateRule1  "Duplicate Rule 1"  salience 10 {
+when
+(Fact.Distance > 5000  &&   Fact.Duration > 120) && (Fact.Result == false)
+Then
+   Fact.NetAmount=143.320007;
+   Fact.Result=true;
+}
+rule  DuplicateRule2  "Duplicate Rule 2"  salience 10 {
+when
+(Fact.Distance > 5000  &&   Fact.Duration > 120) && (Fact.Result == false)
+Then
+   Fact.NetAmount=143.320007;
+   Fact.Result=true;
+}
+
+
+rule  DuplicateRule3  "Duplicate Rule 3"  salience 10 {
+when
+(Fact.Distance > 5000  &&   Fact.Duration > 120) && (Fact.Result == false)
+Then
+   Fact.NetAmount=143.320007;
+   Fact.Result=true;
+}
+
+
+rule  DuplicateRule4  "Duplicate Rule 4"  salience 10 {
+when
+(Fact.Distance > 5000  &&   Fact.Duration > 120) && (Fact.Result == false)
+Then
+   Fact.NetAmount=143.320007;
+   Fact.Result=true;
+}
+
+
+rule  DuplicateRule5  "Duplicate Rule 5"  salience 10 {
+when
+(Fact.Distance > 5000  &&   Fact.Duration > 120) && (Fact.Result == false)
+Then
+   Output.NetAmount=143.320007;
+   Fact.Result=true;
+}`
+
+func TestGruleEngine_FetchMatchingRules_Having_Same_Salience(t *testing.T) {
+	//Given
+	fact := &Fact{
+		Distance: 6000,
+		Duration: 123,
+	}
+	dctx := ast.NewDataContext()
+	err := dctx.Add("Fact", fact)
+	assert.NoError(t, err)
+	lib := ast.NewKnowledgeLibrary()
+	rb := builder.NewRuleBuilder(lib)
+	err = rb.BuildRuleFromResource("conflict_rules_test", "0.1.1", pkg.NewBytesResource([]byte(duplicateRules)))
+	assert.NoError(t, err)
+	kb := lib.NewKnowledgeBaseInstance("conflict_rules_test", "0.1.1")
+
+	//When
+	engine := NewGruleEngine()
+	ruleEntries, err := engine.FetchMatchingRules(dctx, kb)
+
+	//Then
+	assert.NoError(t, err)
+	assert.Equal(t, 5, len(ruleEntries))
+}
+
+const duplicateRulesWithDiffSalience = `rule  DuplicateRule1  "Duplicate Rule 1"  salience 5 {
+when
+(Fact.Distance > 5000  &&   Fact.Duration > 120) && (Fact.Result == false)
+Then
+   Fact.NetAmount=143.320007;
+   Fact.Result=true;
+}
+rule  DuplicateRule2  "Duplicate Rule 2"  salience 6 {
+when
+(Fact.Distance > 5000  &&   Fact.Duration > 120) && (Fact.Result == false)
+Then
+   Fact.NetAmount=143.320007;
+   Fact.Result=true;
+}
+
+
+rule  DuplicateRule3  "Duplicate Rule 3"  salience 7 {
+when
+(Fact.Distance > 5000  &&   Fact.Duration > 120) && (Fact.Result == false)
+Then
+   Fact.NetAmount=143.320007;
+   Fact.Result=true;
+}
+
+
+rule  DuplicateRule4  "Duplicate Rule 4"  salience 8 {
+when
+(Fact.Distance > 5000  &&   Fact.Duration > 120) && (Fact.Result == false)
+Then
+   Fact.NetAmount=143.320007;
+   Fact.Result=true;
+}
+
+
+rule  DuplicateRule5  "Duplicate Rule 5"  salience 9 {
+when
+(Fact.Distance > 5000  &&   Fact.Duration == 120) && (Fact.Result == false)
+Then
+   Output.NetAmount=143.320007;
+   Fact.Result=true;
+}`
+
+func TestGruleEngine_FetchMatchingRules_Having_Diff_Salience(t *testing.T) {
+	//Given
+	fact := &Fact{
+		Distance: 6000,
+		Duration: 121,
+	}
+	dctx := ast.NewDataContext()
+	err := dctx.Add("Fact", fact)
+	assert.NoError(t, err)
+	lib := ast.NewKnowledgeLibrary()
+	rb := builder.NewRuleBuilder(lib)
+	err = rb.BuildRuleFromResource("conflict_rules_test", "0.1.1", pkg.NewBytesResource([]byte(duplicateRulesWithDiffSalience)))
+	assert.NoError(t, err)
+	kb := lib.NewKnowledgeBaseInstance("conflict_rules_test", "0.1.1")
+
+	//When
+	engine := NewGruleEngine()
+	ruleEntries, err := engine.FetchMatchingRules(dctx, kb)
+
+	//Then
+	assert.NoError(t, err)
+	assert.Equal(t, 4, len(ruleEntries))
+	assert.Equal(t, 8, ruleEntries[0].Salience.SalienceValue)
+	assert.Equal(t, 7, ruleEntries[1].Salience.SalienceValue)
+	assert.Equal(t, 6, ruleEntries[2].Salience.SalienceValue)
+	assert.Equal(t, 5, ruleEntries[3].Salience.SalienceValue)
+}
+
+//This TestCase is to test whether grule-rule-engine follows logical operator precedence
+// ! - Highest Priority
+// && - Medium Priority
+// || - Lowest Priority
+// Credits: https://chortle.ccsu.edu/java5/Notes/chap40/ch40_16.html
+const logicalOperatorPrecedenceRules = `
+rule  ComplicatedLogicalOperatorRule  "Complicated logical operator rule" {
+when
+Fact.Distance > 5000  ||   Fact.Duration > 120 || Fact.RideType == "On-Demand" && Fact.IsFrequentCustomer == true
+Then
+   Fact.NetAmount=143.320007;
+   Fact.Result=true;
+   Complete();
+}`
+
+/**
+Evaluation must be done below way if you follow logical operator precedence (identify parentheses arrangement)
+(Fact.Distance > 5000  ||   Fact.Duration > 120 || (Fact.RideType == "On-Demand" && Fact.IsFrequentCustomer == true))
+Result:
+Logical Operator Precedence: true
+No precedence: false
+**/
+type LogicalOperatorRuleFact struct {
+	Distance           int32
+	Duration           int32
+	RideType           string
+	IsFrequentCustomer bool
+	Result             bool
+	NetAmount          float32
+}
+
+func TestGruleEngine_Follows_logical_operator_precedence(t *testing.T) {
+	//Given
+	fact := &LogicalOperatorRuleFact{
+		Distance:           2000,
+		Duration:           121,
+		RideType:           "Pre-Booked",
+		IsFrequentCustomer: true,
+	}
+	dctx := ast.NewDataContext()
+	err := dctx.Add("Fact", fact)
+	assert.NoError(t, err)
+	lib := ast.NewKnowledgeLibrary()
+	rb := builder.NewRuleBuilder(lib)
+	err = rb.BuildRuleFromResource("logical_operator_rules_test", "0.1.1", pkg.NewBytesResource([]byte(logicalOperatorPrecedenceRules)))
+	assert.NoError(t, err)
+	kb := lib.NewKnowledgeBaseInstance("logical_operator_rules_test", "0.1.1")
+
+	//When
+	engine := NewGruleEngine()
+	err = engine.Execute(dctx, kb)
+
+	//Then
+	assert.NoError(t, err)
+	assert.Equal(t, fact.Result, true)
+	assert.Equal(t, fact.NetAmount, float32(143.32))
 }

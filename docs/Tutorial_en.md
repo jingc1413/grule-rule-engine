@@ -1,6 +1,6 @@
 # Grule Short Tutorial
 
-[Tutorial](Tutorial_en.md) | [Rule Engine](RuleEngine_en.md) | [GRL](GRL_en.md) | [RETE Algorithm](RETE_en.md) | [Functions](Function_en.md) | [Grule Events](GruleEvent_en.md) | [FAQ](FAQ_en.md)
+[Tutorial](Tutorial_en.md) | [Rule Engine](RuleEngine_en.md) | [GRL](GRL_en.md) | [RETE Algorithm](RETE_en.md) | [Functions](Function_en.md) | [FAQ](FAQ_en.md)
 
 ## Preparation
 
@@ -8,7 +8,7 @@ Please note that Grule is using Go 1.13
 
 To import Grule into your project you can simply import it.
 
-```text
+```Shell
 $go get github.com/hyperjumptech/grule-rule-engine
 ```
 
@@ -185,6 +185,10 @@ for _, res := range resources {
 }
 ```
 
+#### From JSON
+
+You can now build rules from JSON!,  [Read how it works](GRL_JSON_en.md) 
+
 Now, in the `KnowledgeLibrary` we have a `KnowledgeBase` named `TutorialRules` with version `0.0.1`. To execute this particular rule, you have to obtain an instance of it from the `KnowledgeLibrary`. This will be explained on the next section.
 
 ## Executing Grule Rule Engine
@@ -192,7 +196,7 @@ Now, in the `KnowledgeLibrary` we have a `KnowledgeBase` named `TutorialRules` w
 To execute a KnowledgeBase, we need to get an instance of this `KnowledgeBase` from `KnowledgeLibrary` 
 
 ```go
-knowledgeBase := knowledgeLibrary.NewKnowledgeBaseInstance("Tutorial", "0.0.1")
+knowledgeBase := knowledgeLibrary.NewKnowledgeBaseInstance("TutorialRules", "0.0.1")
 ```
 
 Each instance you obtained from knowledgeLibrary is a *clone* from the underlying `KnowledgeBase` *blue-print*. Its entirely different instance that makes it *thread-safe* for execution. Each *instance* also carries its own `WorkingMemory`. This is very useful when you want to have a multithreaded execution of rule engine (eg. In a web-server to serve each request using a rule).
