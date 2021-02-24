@@ -1,6 +1,21 @@
+//  Copyright hyperjumptech/grule-rule-engine Authors
+//
+//  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+//  Unless required by applicable law or agreed to in writing, software
+//  distributed under the License is distributed on an "AS IS" BASIS,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//  See the License for the specific language governing permissions and
+//  limitations under the License.
+
 package examples
 
 import (
+	"fmt"
 	"github.com/hyperjumptech/grule-rule-engine/ast"
 	"github.com/hyperjumptech/grule-rule-engine/builder"
 	"github.com/hyperjumptech/grule-rule-engine/engine"
@@ -16,6 +31,10 @@ type TestTree struct {
 
 func (tt *TestTree) GetChild() *TestTree {
 	return tt.Child
+}
+
+func (tt *TestTree) CallMyName() {
+	fmt.Println("Calling your name", tt.Name)
 }
 
 func TestFunctionChain(t *testing.T) {
@@ -42,6 +61,7 @@ rule SetTreeName "Set the top most tree name" {
 		Tree.GetChild().GetChild().GetChild().Name.ToLower() == "   testtesttesttest  ".Trim()
 	then
 		Tree.Name = "VERIFIED".ToLower();
+		Tree.GetChild().GetChild().CallMyName();
 		Retract("SetTreeName");
 }
 `

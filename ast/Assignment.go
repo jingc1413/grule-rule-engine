@@ -1,16 +1,30 @@
+//  Copyright hyperjumptech/grule-rule-engine Authors
+//
+//  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+//  Unless required by applicable law or agreed to in writing, software
+//  distributed under the License is distributed on an "AS IS" BASIS,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//  See the License for the specific language governing permissions and
+//  limitations under the License.
+
 package ast
 
 import (
 	"bytes"
 	"errors"
-	"github.com/google/uuid"
+	"github.com/hyperjumptech/grule-rule-engine/ast/unique"
 	"github.com/hyperjumptech/grule-rule-engine/pkg"
 )
 
 // NewAssignment will create new instance of Assignment AST Node
 func NewAssignment() *Assignment {
 	return &Assignment{
-		AstID: uuid.New().String(),
+		AstID: unique.NewID(),
 	}
 }
 
@@ -19,8 +33,13 @@ type Assignment struct {
 	AstID   string
 	GrlText string
 
-	Variable   *Variable
-	Expression *Expression
+	Variable      *Variable
+	Expression    *Expression
+	IsAssign      bool
+	IsPlusAssign  bool
+	IsMinusAssign bool
+	IsDivAssign   bool
+	IsMulAssign   bool
 }
 
 // AssignmentReceiver must be implemented by all other ast graph that uses an assigment expression
@@ -31,7 +50,7 @@ type AssignmentReceiver interface {
 // Clone will clone this Assignment. The new clone will have an identical structure
 func (e *Assignment) Clone(cloneTable *pkg.CloneTable) *Assignment {
 	clone := &Assignment{
-		AstID:   uuid.New().String(),
+		AstID:   unique.NewID(),
 		GrlText: e.GrlText,
 	}
 	if e.Variable != nil {
@@ -52,6 +71,11 @@ func (e *Assignment) Clone(cloneTable *pkg.CloneTable) *Assignment {
 			cloneTable.MarkCloned(e.Expression.AstID, cloned.AstID, e.Expression, cloned)
 		}
 	}
+	clone.IsAssign = e.IsAssign
+	clone.IsDivAssign = e.IsDivAssign
+	clone.IsMinusAssign = e.IsMinusAssign
+	clone.IsMulAssign = e.IsMulAssign
+	clone.IsPlusAssign = e.IsPlusAssign
 	return clone
 }
 
@@ -89,7 +113,21 @@ func (e *Assignment) GetSnapshot() string {
 	buff.WriteString(ASSIGMENT)
 	buff.WriteString("(")
 	buff.WriteString(e.Variable.GetSnapshot())
-	buff.WriteString("=")
+	if e.IsAssign {
+		buff.WriteString("=")
+	}
+	if e.IsMinusAssign {
+		buff.WriteString("-=")
+	}
+	if e.IsDivAssign {
+		buff.WriteString("/=")
+	}
+	if e.IsMulAssign {
+		buff.WriteString("*=")
+	}
+	if e.IsPlusAssign {
+		buff.WriteString("+=")
+	}
 	buff.WriteString(e.Expression.GetSnapshot())
 	buff.WriteString(")")
 	return buff.String()
@@ -107,5 +145,40 @@ func (e *Assignment) Execute(dataContext IDataContext, memory *WorkingMemory) er
 	if err != nil {
 		return err
 	}
-	return e.Variable.Assign(exprVal, dataContext, memory)
+	if e.IsAssign {
+		return e.Variable.Assign(exprVal, dataContext, memory)
+	}
+	varval, err := e.Variable.Evaluate(dataContext, memory)
+	if err != nil {
+		return err
+	}
+	if e.IsPlusAssign {
+		nval, err := pkg.EvaluateAddition(varval, exprVal)
+		if err != nil {
+			return err
+		}
+		return e.Variable.Assign(nval, dataContext, memory)
+	}
+	if e.IsMinusAssign {
+		nval, err := pkg.EvaluateSubtraction(varval, exprVal)
+		if err != nil {
+			return err
+		}
+		return e.Variable.Assign(nval, dataContext, memory)
+	}
+	if e.IsMulAssign {
+		nval, err := pkg.EvaluateMultiplication(varval, exprVal)
+		if err != nil {
+			return err
+		}
+		return e.Variable.Assign(nval, dataContext, memory)
+	}
+	if e.IsDivAssign {
+		nval, err := pkg.EvaluateDivision(varval, exprVal)
+		if err != nil {
+			return err
+		}
+		return e.Variable.Assign(nval, dataContext, memory)
+	}
+	return nil
 }

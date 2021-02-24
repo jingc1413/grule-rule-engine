@@ -1,18 +1,31 @@
+//  Copyright hyperjumptech/grule-rule-engine Authors
+//
+//  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+//  Unless required by applicable law or agreed to in writing, software
+//  distributed under the License is distributed on an "AS IS" BASIS,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//  See the License for the specific language governing permissions and
+//  limitations under the License.
+
 package ast
 
 import (
 	"bytes"
 	"fmt"
-	"github.com/google/uuid"
+	"github.com/hyperjumptech/grule-rule-engine/ast/unique"
 	"github.com/hyperjumptech/grule-rule-engine/pkg"
-	log "github.com/sirupsen/logrus"
 	"reflect"
 )
 
 // NewFunctionCall creates new instance of FunctionCall
 func NewFunctionCall() *FunctionCall {
 	return &FunctionCall{
-		AstID:        uuid.New().String(),
+		AstID:        unique.NewID(),
 		ArgumentList: NewArgumentList(),
 	}
 }
@@ -30,7 +43,7 @@ type FunctionCall struct {
 // Clone will clone this FunctionCall. The new clone will have an identical structure
 func (e *FunctionCall) Clone(cloneTable *pkg.CloneTable) *FunctionCall {
 	clone := &FunctionCall{
-		AstID:        uuid.New().String(),
+		AstID:        unique.NewID(),
 		GrlText:      e.GrlText,
 		FunctionName: e.FunctionName,
 	}
@@ -67,9 +80,7 @@ func (e *FunctionCall) GetSnapshot() string {
 	var buff bytes.Buffer
 	buff.WriteString(FUNCTIONCALL)
 	buff.WriteString(fmt.Sprintf("(n:%s", e.FunctionName))
-	if e.ArgumentList == nil {
-		log.Errorf("Argument is nil")
-	} else {
+	if e.ArgumentList != nil {
 		buff.WriteString(",")
 		buff.WriteString(e.ArgumentList.GetSnapshot())
 	}
@@ -85,7 +96,7 @@ func (e *FunctionCall) SetGrlText(grlText string) {
 
 // AcceptArgumentList will accept an ArgumentList AST graph into this ast graph
 func (e *FunctionCall) AcceptArgumentList(argList *ArgumentList) error {
-	log.Tracef("Method received argument list")
+	AstLog.Tracef("Method received argument list")
 	e.ArgumentList = argList
 	return nil
 }

@@ -1,20 +1,34 @@
+//  Copyright hyperjumptech/grule-rule-engine Authors
+//
+//  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+//  Unless required by applicable law or agreed to in writing, software
+//  distributed under the License is distributed on an "AS IS" BASIS,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//  See the License for the specific language governing permissions and
+//  limitations under the License.
+
 package engine
 
 import (
 	"context"
 	"fmt"
+	"github.com/hyperjumptech/grule-rule-engine/ast"
+	"github.com/hyperjumptech/grule-rule-engine/logger"
 	"sort"
 	"time"
 
-	"github.com/hyperjumptech/grule-rule-engine/ast"
 	"github.com/sirupsen/logrus"
 )
 
 var (
 	// Logger is a logrus instance with default fields for grule
-	log = logrus.WithFields(logrus.Fields{
-		"lib":    "grule",
-		"struct": "GruleEngineV2",
+	log = logger.Log.WithFields(logrus.Fields{
+		"package": "engine",
 	})
 )
 
@@ -40,17 +54,6 @@ func (g *GruleEngine) Execute(dataCtx ast.IDataContext, knowledge *ast.Knowledge
 // The engine will evaluate context cancelation status in each cycle.
 // The engine also do conflict resolution of which rule to execute.
 func (g *GruleEngine) ExecuteWithContext(ctx context.Context, dataCtx ast.IDataContext, knowledge *ast.KnowledgeBase) error {
-	var contextError error
-	var contextCanceled bool
-
-	go func() {
-		select {
-		case <-ctx.Done():
-			contextError = ctx.Err()
-			contextCanceled = true
-		}
-	}()
-
 	log.Debugf("Starting rule execution using knowledge '%s' version %s. Contains %d rule entries", knowledge.Name, knowledge.Version, len(knowledge.RuleEntries))
 
 	// Prepare the timer, we need to measure the processing time in debug mode.
@@ -75,14 +78,14 @@ func (g *GruleEngine) ExecuteWithContext(ctx context.Context, dataCtx ast.IDataC
 	var cycle uint64
 
 	/*
-		Un-limitted loop as long as there are rule to execute.
-		We need to add safety mechanism to detect unlimitted loop as there are posibility executed rule are not changing
+		Un-limited loop as long as there are rule to execute.
+		We need to add safety mechanism to detect unlimited loop as there are possibility executed rule are not changing
 		data context which makes rules to get executed again and again.
 	*/
 	for {
-		if contextCanceled {
+		if ctx.Err() != nil {
 			log.Error("Context canceled")
-			return contextError
+			return ctx.Err()
 		}
 
 		// Select all rule entry that can be executed.
@@ -92,7 +95,7 @@ func (g *GruleEngine) ExecuteWithContext(ctx context.Context, dataCtx ast.IDataC
 			// test if this rule entry v can execute.
 			can, err := v.Evaluate(dataCtx, knowledge.WorkingMemory)
 			if err != nil {
-				log.Errorf("Failed testing condition for rule : %s. Got error %v", v.RuleName.SimpleName, err)
+				log.Errorf("Failed testing condition for rule : %s. Got error %v", v.RuleName, err)
 				// No longer return error, since unavailability of variable or fact in context might be intentional.
 			}
 			// if can, add into runnable array
@@ -123,7 +126,7 @@ func (g *GruleEngine) ExecuteWithContext(ctx context.Context, dataCtx ast.IDataC
 			// scan all runnables and pick the highest salience
 			if len(runnable) > 1 {
 				for idx, pr := range runnable {
-					if idx > 0 && runner.Salience.SalienceValue < pr.Salience.SalienceValue {
+					if idx > 0 && runner.Salience < pr.Salience {
 						runner = pr
 					}
 				}
@@ -131,7 +134,7 @@ func (g *GruleEngine) ExecuteWithContext(ctx context.Context, dataCtx ast.IDataC
 			// execute the top most prioritized rule
 			err := runner.Execute(dataCtx, knowledge.WorkingMemory)
 			if err != nil {
-				log.Errorf("Failed execution rule : %s. Got error %v", runner.RuleName.SimpleName, err)
+				log.Errorf("Failed execution rule : %s. Got error %v", runner.RuleName, err)
 				return err
 			}
 
@@ -175,7 +178,7 @@ func (g *GruleEngine) FetchMatchingRules(dataCtx ast.IDataContext, knowledge *as
 		// test if this rule entry v can execute.
 		can, err := v.Evaluate(dataCtx, knowledge.WorkingMemory)
 		if err != nil {
-			log.Errorf("Failed testing condition for rule : %s. Got error %v", v.RuleName.SimpleName, err)
+			log.Errorf("Failed testing condition for rule : %s. Got error %v", v.RuleName, err)
 			// No longer return error, since unavailability of variable or fact in context might be intentional.
 		}
 		// if can, add into runnable array
@@ -187,7 +190,7 @@ func (g *GruleEngine) FetchMatchingRules(dataCtx ast.IDataContext, knowledge *as
 	log.Debugf("Matching rules length %d.", len(runnable))
 	if len(runnable) > 1 {
 		sort.SliceStable(runnable, func(i, j int) bool {
-			return runnable[i].Salience.SalienceValue > runnable[j].Salience.SalienceValue
+			return runnable[i].Salience > runnable[j].Salience
 		})
 	}
 	return runnable, nil

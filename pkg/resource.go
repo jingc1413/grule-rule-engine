@@ -1,14 +1,28 @@
+//  Copyright hyperjumptech/grule-rule-engine Authors
+//
+//  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+//  Unless required by applicable law or agreed to in writing, software
+//  distributed under the License is distributed on an "AS IS" BASIS,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//  See the License for the specific language governing permissions and
+//  limitations under the License.
+
 package pkg
 
 import (
 	"fmt"
+	"github.com/hyperjumptech/grule-rule-engine/logger"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"path/filepath"
 
 	"github.com/bmatcuk/doublestar"
-	"github.com/sirupsen/logrus"
 	"gopkg.in/src-d/go-billy.v4"
 )
 
@@ -93,7 +107,7 @@ func (bundle *FileResourceBundle) MustLoad() []Resource {
 }
 
 func (bundle *FileResourceBundle) loadPath(path string) ([]Resource, error) {
-	logrus.Tracef("Enter directory %s", path)
+	logger.Log.Tracef("Enter directory %s", path)
 
 	finfos, err := ioutil.ReadDir(path)
 
@@ -117,7 +131,7 @@ func (bundle *FileResourceBundle) loadPath(path string) ([]Resource, error) {
 					return nil, err
 				}
 				if matched {
-					logrus.Debugf("Loading file %s", fulPath)
+					logger.Log.Debugf("Loading file %s", fulPath)
 					bytes, err := ioutil.ReadFile(fulPath)
 					if err != nil {
 						return nil, err
@@ -252,7 +266,7 @@ type GITResourceBundle struct {
 }
 
 func (bundle *GITResourceBundle) loadPath(url, path string, fs billy.Filesystem) ([]Resource, error) {
-	logrus.Tracef("Enter directory %s", path)
+	logger.Log.Tracef("Enter directory %s", path)
 	finfos, err := fs.ReadDir(path)
 	if err != nil {
 		return nil, err
@@ -276,7 +290,7 @@ func (bundle *GITResourceBundle) loadPath(url, path string, fs billy.Filesystem)
 					return nil, err
 				}
 				if matched {
-					logrus.Debugf("Loading git file %s", fulPath)
+					logger.Log.Debugf("Loading git file %s", fulPath)
 					f, err := fs.Open(fulPath)
 					if err != nil {
 						return nil, err

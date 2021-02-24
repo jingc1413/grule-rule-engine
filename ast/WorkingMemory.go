@@ -1,8 +1,22 @@
+//  Copyright hyperjumptech/grule-rule-engine Authors
+//
+//  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+//  Unless required by applicable law or agreed to in writing, software
+//  distributed under the License is distributed on an "AS IS" BASIS,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//  See the License for the specific language governing permissions and
+//  limitations under the License.
+
 package ast
 
 import (
 	"fmt"
-	"github.com/google/uuid"
+	"github.com/hyperjumptech/grule-rule-engine/ast/unique"
 	"github.com/hyperjumptech/grule-rule-engine/pkg"
 	"github.com/sirupsen/logrus"
 	"strings"
@@ -19,7 +33,7 @@ func NewWorkingMemory(name, version string) *WorkingMemory {
 		expressionAtomSnapshotMap: make(map[string]*ExpressionAtom),
 		expressionVariableMap:     make(map[*Variable][]*Expression),
 		expressionAtomVariableMap: make(map[*Variable][]*ExpressionAtom),
-		ID:                        uuid.New().String(),
+		ID:                        unique.NewID(),
 	}
 }
 
@@ -109,7 +123,7 @@ func (e *WorkingMemory) Clone(cloneTable *pkg.CloneTable) *WorkingMemory {
 			if cloneTable.IsCloned(exprAtm.AstID) {
 				clone.expressionAtomSnapshotMap[k] = cloneTable.Records[exprAtm.AstID].CloneInstance.(*ExpressionAtom)
 			} else {
-				panic(fmt.Sprintf("expression atom %s is not on the clone table", exprAtm.GrlText))
+				panic(fmt.Sprintf("expression atom %s is not on the clone table. ASTID %s", exprAtm.GrlText, exprAtm.AstID))
 			}
 		}
 	}
@@ -178,7 +192,7 @@ func (e *WorkingMemory) IndexVariables() {
 	start := time.Now()
 	defer func() {
 		dur := time.Since(start)
-		AstLog.Infof("Working memory indexing takes %d ms", dur/time.Millisecond)
+		AstLog.Tracef("Working memory indexing takes %d ms", dur/time.Millisecond)
 	}()
 	e.expressionVariableMap = make(map[*Variable][]*Expression)
 	e.expressionAtomVariableMap = make(map[*Variable][]*ExpressionAtom)
@@ -248,20 +262,20 @@ func (e *WorkingMemory) AddVariable(vari *Variable) *Variable {
 
 // Reset will reset the evaluated status of a specific variable if its contains a variable name in its signature.
 // Returns true if any expression was reset, false if otherwise
-func (e *WorkingMemory) Reset(varName string) bool {
-	AstLog.Tracef("------- resetting var %s", varName)
+func (e *WorkingMemory) Reset(name string) bool {
+	AstLog.Tracef("------- resetting  %s", name)
 	for _, vari := range e.variableSnapshotMap {
-		if vari.GrlText == varName {
+		if vari.GrlText == name {
 			return e.ResetVariable(vari)
 		}
 	}
 	for snap, expr := range e.expressionSnapshotMap {
-		if strings.Contains(snap, varName) {
+		if strings.Contains(snap, name) || strings.Contains(expr.GrlText, name) {
 			expr.Evaluated = false
 		}
 	}
 	for snap, expr := range e.expressionAtomSnapshotMap {
-		if strings.Contains(snap, varName) {
+		if strings.Contains(snap, name) || strings.Contains(expr.GrlText, name) {
 			expr.Evaluated = false
 		}
 	}

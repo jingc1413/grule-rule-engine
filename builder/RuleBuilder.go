@@ -1,15 +1,37 @@
+//  Copyright hyperjumptech/grule-rule-engine Authors
+//
+//  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+//  Unless required by applicable law or agreed to in writing, software
+//  distributed under the License is distributed on an "AS IS" BASIS,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//  See the License for the specific language governing permissions and
+//  limitations under the License.
+
 package builder
 
 import (
 	"fmt"
+	"github.com/hyperjumptech/grule-rule-engine/ast"
+	"github.com/hyperjumptech/grule-rule-engine/logger"
+	"github.com/sirupsen/logrus"
 	"time"
 
 	"github.com/antlr/antlr4/runtime/Go/antlr"
 	antlr2 "github.com/hyperjumptech/grule-rule-engine/antlr"
-	parser2 "github.com/hyperjumptech/grule-rule-engine/antlr/parser/grulev2"
-	"github.com/hyperjumptech/grule-rule-engine/ast"
+	parser "github.com/hyperjumptech/grule-rule-engine/antlr/parser/grulev3"
 	"github.com/hyperjumptech/grule-rule-engine/pkg"
-	log "github.com/sirupsen/logrus"
+)
+
+var (
+	// BuilderLog is a logrus instance twith default fields for grule
+	BuilderLog = logger.Log.WithFields(logrus.Fields{
+		"package": "builder",
+	})
 )
 
 // NewRuleBuilder creates new RuleBuilder instance. This builder will add all loaded rules into the specified knowledgebase.
@@ -19,7 +41,7 @@ func NewRuleBuilder(KnowledgeLibrary *ast.KnowledgeLibrary) *RuleBuilder {
 	}
 }
 
-// RuleBuilder builds rule from DRL script into contained KnowledgeBase
+// RuleBuilder builds rule from GRL script into contained KnowledgeBase
 type RuleBuilder struct {
 	KnowledgeLibrary *ast.KnowledgeLibrary
 }
@@ -79,7 +101,7 @@ func (builder *RuleBuilder) BuildRuleFromResource(name, version string, resource
 
 	// Immediately parse the loaded resource
 	is := antlr.NewInputStream(string(data))
-	lexer := parser2.Newgrulev2Lexer(is)
+	lexer := parser.Newgrulev3Lexer(is)
 	stream := antlr.NewCommonTokenStream(lexer, antlr.TokenDefaultChannel)
 
 	var parseError error
@@ -92,17 +114,17 @@ func (builder *RuleBuilder) BuildRuleFromResource(name, version string, resource
 		return fmt.Errorf("KnowledgeBase %s:%s is not in this library", name, version)
 	}
 
-	listener := antlr2.NewGruleV2ParserListener(kb, errCall)
+	listener := antlr2.NewGruleV3ParserListener(kb, errCall)
 
-	psr := parser2.Newgrulev2Parser(stream)
+	psr := parser.Newgrulev3Parser(stream)
 	psr.BuildParseTrees = true
 	antlr.ParseTreeWalkerDefault.Walk(listener, psr.Grl())
 
 	grl := listener.Grl
 	for _, ruleEntry := range grl.RuleEntries {
 		err := kb.AddRuleEntry(ruleEntry)
-		if err != nil {
-			log.Warnf("warning while adding rule entry : %s. got %s, possibly already added by antlr listener", ruleEntry.RuleName.SimpleName, err.Error())
+		if err != nil && err.Error() != "rule entry TestNoDesc already exist" {
+			BuilderLog.Tracef("warning while adding rule entry : %s. got %s, possibly already added by antlr listener", ruleEntry.RuleName, err.Error())
 		}
 	}
 
@@ -112,11 +134,11 @@ func (builder *RuleBuilder) BuildRuleFromResource(name, version string, resource
 	dur := time.Now().Sub(startTime)
 
 	if parseError != nil {
-		log.Errorf("Loading rule resource : %s failed. Got %v. Time take %d ms", resource.String(), parseError, dur.Nanoseconds()/1e6)
+		BuilderLog.Errorf("Loading rule resource : %s failed. Got %v. Time take %d ms", resource.String(), parseError, dur.Nanoseconds()/1e6)
 		return fmt.Errorf("error were found before builder bailing out. Got %v", parseError)
 	}
 
-	log.Debugf("Loading rule resource : %s success. Time taken %d ms", resource.String(), dur.Nanoseconds()/1e6)
+	BuilderLog.Debugf("Loading rule resource : %s success. Time taken %d ms", resource.String(), dur.Nanoseconds()/1e6)
 
 	return nil
 }

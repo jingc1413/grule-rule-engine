@@ -1,15 +1,29 @@
+//  Copyright hyperjumptech/grule-rule-engine Authors
+//
+//  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+//  Unless required by applicable law or agreed to in writing, software
+//  distributed under the License is distributed on an "AS IS" BASIS,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//  See the License for the specific language governing permissions and
+//  limitations under the License.
+
 package ast
 
 import (
 	"bytes"
-	"github.com/google/uuid"
+	"github.com/hyperjumptech/grule-rule-engine/ast/unique"
 	"github.com/hyperjumptech/grule-rule-engine/pkg"
 )
 
 // NewThenScope will create new instance of ThenScope
 func NewThenScope() *ThenScope {
 	return &ThenScope{
-		AstID: uuid.New().String(),
+		AstID: unique.NewID(),
 	}
 }
 
@@ -29,7 +43,7 @@ type ThenScopeReceiver interface {
 // Clone will clone this ThenScope. The new clone will have an identical structure
 func (e *ThenScope) Clone(cloneTable *pkg.CloneTable) *ThenScope {
 	clone := &ThenScope{
-		AstID:   uuid.New().String(),
+		AstID:   unique.NewID(),
 		GrlText: e.GrlText,
 	}
 
@@ -67,7 +81,9 @@ func (e *ThenScope) GetSnapshot() string {
 	var buff bytes.Buffer
 	buff.WriteString(THENSCOPE)
 	buff.WriteString("(")
-	buff.WriteString(e.ThenExpressionList.GetSnapshot())
+	if e.ThenExpressionList != nil {
+		buff.WriteString(e.ThenExpressionList.GetSnapshot())
+	}
 	buff.WriteString(")")
 	return buff.String()
 }

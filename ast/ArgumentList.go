@@ -1,17 +1,31 @@
+//  Copyright hyperjumptech/grule-rule-engine Authors
+//
+//  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+//  Unless required by applicable law or agreed to in writing, software
+//  distributed under the License is distributed on an "AS IS" BASIS,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//  See the License for the specific language governing permissions and
+//  limitations under the License.
+
 package ast
 
 import (
 	"bytes"
+	"github.com/hyperjumptech/grule-rule-engine/ast/unique"
 	"reflect"
 
-	"github.com/google/uuid"
 	"github.com/hyperjumptech/grule-rule-engine/pkg"
 )
 
 // NewArgumentList create a new instance of ArgumentList
 func NewArgumentList() *ArgumentList {
 	return &ArgumentList{
-		AstID:     uuid.New().String(),
+		AstID:     unique.NewID(),
 		Arguments: make([]*Expression, 0),
 	}
 }
@@ -27,7 +41,7 @@ type ArgumentList struct {
 // Clone will clone this ArgumentList. The new clone will have an identical structure
 func (e *ArgumentList) Clone(cloneTable *pkg.CloneTable) *ArgumentList {
 	clone := &ArgumentList{
-		AstID:   uuid.New().String(),
+		AstID:   unique.NewID(),
 		GrlText: e.GrlText,
 	}
 	if e.Arguments != nil {

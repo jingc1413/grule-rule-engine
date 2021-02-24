@@ -1,6 +1,23 @@
+//  Copyright hyperjumptech/grule-rule-engine Authors
+//
+//  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+//  Unless required by applicable law or agreed to in writing, software
+//  distributed under the License is distributed on an "AS IS" BASIS,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//  See the License for the specific language governing permissions and
+//  limitations under the License.
+
 package ast
 
-import "github.com/sirupsen/logrus"
+import (
+	"github.com/hyperjumptech/grule-rule-engine/logger"
+	"github.com/sirupsen/logrus"
+)
 
 const (
 	// ARGUMENTLIST signature for argument list snapshot
@@ -33,9 +50,8 @@ const (
 
 var (
 	// AstLog is a logrus instance twith default fields for grule
-	AstLog = logrus.WithFields(logrus.Fields{
-		"lib":     "grule",
-		"package": "AST",
+	AstLog = logger.Log.WithFields(logrus.Fields{
+		"package": "ast",
 	})
 )
 

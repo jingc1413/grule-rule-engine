@@ -1,66 +1,29 @@
+//  Copyright hyperjumptech/grule-rule-engine Authors
+//
+//  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+//  Unless required by applicable law or agreed to in writing, software
+//  distributed under the License is distributed on an "AS IS" BASIS,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//  See the License for the specific language governing permissions and
+//  limitations under the License.
+
 package antlr
 
 import (
+	"fmt"
 	"github.com/antlr/antlr4/runtime/Go/antlr"
-	parser "github.com/hyperjumptech/grule-rule-engine/antlr/parser/grulev2"
+	parser "github.com/hyperjumptech/grule-rule-engine/antlr/parser/grulev3"
 	"github.com/hyperjumptech/grule-rule-engine/ast"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"reflect"
 	"testing"
 )
-
-func TestV2Lexer(t *testing.T) {
-	data, err := ioutil.ReadFile("./sample2.grl")
-	if err != nil {
-		t.Fatal(err)
-	} else {
-		is := antlr.NewInputStream(string(data))
-
-		// Create the Lexer
-		lexer := parser.Newgrulev2Lexer(is)
-		//lexer := parser.NewLdifParserLexer(is)
-
-		// Read all tokens
-		for {
-			nt := lexer.NextToken()
-			if nt.GetTokenType() == antlr.TokenEOF {
-				break
-			}
-		}
-	}
-
-}
-
-func TestV2Parser(t *testing.T) {
-	// logrus.SetLevel(logrus.TraceLevel)
-	data, err := ioutil.ReadFile("./sample3.grl")
-	if err != nil {
-		t.Fatal(err)
-	} else {
-		sdata := string(data)
-
-		is := antlr.NewInputStream(sdata)
-		lexer := parser.Newgrulev2Lexer(is)
-		stream := antlr.NewCommonTokenStream(lexer, antlr.TokenDefaultChannel)
-
-		var parseError error
-		kb := ast.NewKnowledgeLibrary().GetKnowledgeBase("T", "1")
-
-		listener := NewGruleV2ParserListener(kb, func(e error) {
-			parseError = e
-		})
-
-		psr := parser.Newgrulev2Parser(stream)
-		psr.BuildParseTrees = true
-		antlr.ParseTreeWalkerDefault.Walk(listener, psr.Grl())
-
-		if parseError != nil {
-			t.Log(parseError)
-			t.FailNow()
-		}
-	}
-}
 
 const (
 	rules = `
@@ -122,24 +85,94 @@ rule SetTime "When Distance Recorder time not set, set it." {
 }`
 )
 
-func TestV2Parser2(t *testing.T) {
+type Person struct {
+	Name         string
+	ParentString string
+	Child        *Child
+}
+
+type Child struct {
+	Name        string
+	ChildString string
+	GrandChild  *GrandChild
+}
+
+type GrandChild struct {
+	GrandChildString string
+	Name             string
+}
+
+func TestV3Lexer(t *testing.T) {
+	data, err := ioutil.ReadFile("./sample4.grl")
+	if err != nil {
+		t.Fatal(err)
+	} else {
+		is := antlr.NewInputStream(string(data))
+
+		// Create the Lexer
+		lexer := parser.Newgrulev3Lexer(is)
+		//lexer := parser.NewLdifParserLexer(is)
+
+		// Read all tokens
+		for {
+			nt := lexer.NextToken()
+			fmt.Println(nt.GetText())
+			if nt.GetTokenType() == antlr.TokenEOF {
+				break
+			}
+		}
+	}
+
+}
+
+func TestV3Parser(t *testing.T) {
+	// logrus.SetLevel(logrus.TraceLevel)
+	data, err := ioutil.ReadFile("./sample4.grl")
+	if err != nil {
+		t.Fatal(err)
+	} else {
+		sdata := string(data)
+
+		is := antlr.NewInputStream(sdata)
+		lexer := parser.Newgrulev3Lexer(is)
+		stream := antlr.NewCommonTokenStream(lexer, antlr.TokenDefaultChannel)
+
+		var parseError error
+		kb := ast.NewKnowledgeLibrary().GetKnowledgeBase("T", "1")
+
+		listener := NewGruleV3ParserListener(kb, func(e error) {
+			parseError = e
+		})
+
+		psr := parser.Newgrulev3Parser(stream)
+		psr.BuildParseTrees = true
+		antlr.ParseTreeWalkerDefault.Walk(listener, psr.Grl())
+
+		if parseError != nil {
+			t.Log(parseError)
+			t.FailNow()
+		}
+	}
+}
+
+func TestV3Parser2(t *testing.T) {
 	// logrus.SetLevel(logrus.InfoLevel)
 
 	sdata := rules
 
 	is := antlr.NewInputStream(sdata)
-	lexer := parser.Newgrulev2Lexer(is)
+	lexer := parser.Newgrulev3Lexer(is)
 	stream := antlr.NewCommonTokenStream(lexer, antlr.TokenDefaultChannel)
 
 	var parseError error
 	kb := ast.NewKnowledgeLibrary().GetKnowledgeBase("T", "1")
 
-	listener := NewGruleV2ParserListener(kb, func(e error) {
+	listener := NewGruleV3ParserListener(kb, func(e error) {
 		parseError = e
 		panic(e)
 	})
 
-	psr := parser.Newgrulev2Parser(stream)
+	psr := parser.Newgrulev3Parser(stream)
 	psr.BuildParseTrees = true
 	antlr.ParseTreeWalkerDefault.Walk(listener, psr.Grl())
 
@@ -149,21 +182,21 @@ func TestV2Parser2(t *testing.T) {
 	}
 }
 
-func TestV2ParserEscapedStringInvalid(t *testing.T) {
+func TestV3ParserEscapedStringInvalid(t *testing.T) {
 	// logrus.SetLevel(logrus.DebugLevel)
 
 	is := antlr.NewInputStream(invalidEscapeRule)
-	lexer := parser.Newgrulev2Lexer(is)
+	lexer := parser.Newgrulev3Lexer(is)
 	stream := antlr.NewCommonTokenStream(lexer, antlr.TokenDefaultChannel)
 
 	var parseError error
 	kb := ast.NewKnowledgeLibrary().GetKnowledgeBase("T", "1")
 
-	listener := NewGruleV2ParserListener(kb, func(e error) {
+	listener := NewGruleV3ParserListener(kb, func(e error) {
 		parseError = e
 	})
 
-	psr := parser.Newgrulev2Parser(stream)
+	psr := parser.Newgrulev3Parser(stream)
 	psr.BuildParseTrees = true
 	antlr.ParseTreeWalkerDefault.Walk(listener, psr.Grl())
 
@@ -172,21 +205,21 @@ func TestV2ParserEscapedStringInvalid(t *testing.T) {
 	}
 }
 
-func TestV2ParserEscapedStringValid(t *testing.T) {
+func TestV3ParserEscapedStringValid(t *testing.T) {
 	// logrus.SetLevel(logrus.DebugLevel)
 
 	is := antlr.NewInputStream(validEscapeRule)
-	lexer := parser.Newgrulev2Lexer(is)
+	lexer := parser.Newgrulev3Lexer(is)
 	stream := antlr.NewCommonTokenStream(lexer, antlr.TokenDefaultChannel)
 
 	var parseError error
 	kb := ast.NewKnowledgeLibrary().GetKnowledgeBase("T", "1")
 
-	listener := NewGruleV2ParserListener(kb, func(e error) {
+	listener := NewGruleV3ParserListener(kb, func(e error) {
 		parseError = e
 	})
 
-	psr := parser.Newgrulev2Parser(stream)
+	psr := parser.Newgrulev3Parser(stream)
 	psr.BuildParseTrees = true
 	antlr.ParseTreeWalkerDefault.Walk(listener, psr.Grl())
 
@@ -195,7 +228,7 @@ func TestV2ParserEscapedStringValid(t *testing.T) {
 	}
 }
 
-func TestV2ParserSnapshotEyeBalling(t *testing.T) {
+func TestV3ParserSnapshotEyeBalling(t *testing.T) {
 	// logrus.SetLevel(logrus.TraceLevel)
 
 	data := `
@@ -209,17 +242,17 @@ rule SpeedUp "When testcar is speeding up we keep increase the speed." salience 
 `
 
 	is := antlr.NewInputStream(data)
-	lexer := parser.Newgrulev2Lexer(is)
+	lexer := parser.Newgrulev3Lexer(is)
 	stream := antlr.NewCommonTokenStream(lexer, antlr.TokenDefaultChannel)
 
 	var parseError error
 	kb := ast.NewKnowledgeLibrary().GetKnowledgeBase("T", "1")
 
-	listener := NewGruleV2ParserListener(kb, func(e error) {
+	listener := NewGruleV3ParserListener(kb, func(e error) {
 		parseError = e
 	})
 
-	psr := parser.Newgrulev2Parser(stream)
+	psr := parser.Newgrulev3Parser(stream)
 	psr.BuildParseTrees = true
 	antlr.ParseTreeWalkerDefault.Walk(listener, psr.Grl())
 	if parseError != nil {
@@ -249,36 +282,19 @@ rule SpeedUp "When testcar is speeding up we keep increase the speed." salience 
 	}
 }
 
-type Person struct {
-	Name         string
-	ParentString string
-	Child        *Child
-}
-
-type Child struct {
-	Name        string
-	ChildString string
-	GrandChild  *GrandChild
-}
-
-type GrandChild struct {
-	GrandChildString string
-	Name             string
-}
-
-func prepareTestKnowledgeBase(t *testing.T, grl string) (*ast.KnowledgeBase, *ast.WorkingMemory) {
+func prepareV3TestKnowledgeBase(t *testing.T, grl string) (*ast.KnowledgeBase, *ast.WorkingMemory) {
 	is := antlr.NewInputStream(grl)
-	lexer := parser.Newgrulev2Lexer(is)
+	lexer := parser.Newgrulev3Lexer(is)
 	stream := antlr.NewCommonTokenStream(lexer, antlr.TokenDefaultChannel)
 
 	var parseError error
 	kb := ast.NewKnowledgeLibrary().GetKnowledgeBase("T", "1")
 
-	listener := NewGruleV2ParserListener(kb, func(e error) {
+	listener := NewGruleV3ParserListener(kb, func(e error) {
 		parseError = e
 	})
 
-	psr := parser.Newgrulev2Parser(stream)
+	psr := parser.Newgrulev3Parser(stream)
 	psr.BuildParseTrees = true
 	antlr.ParseTreeWalkerDefault.Walk(listener, psr.Grl())
 	assert.NoError(t, parseError)
@@ -286,7 +302,7 @@ func prepareTestKnowledgeBase(t *testing.T, grl string) (*ast.KnowledgeBase, *as
 	return kb, kb.WorkingMemory
 }
 
-func TestConstantFunctionAndConstantFunctionChain(t *testing.T) {
+func TestV3ConstantFunctionAndConstantFunctionChain(t *testing.T) {
 	// logrus.SetLevel(logrus.InfoLevel)
 	dctx := ast.NewDataContext()
 
@@ -298,7 +314,7 @@ rule RuleOne "RuleOneDesc" salience 123 {
         Log("      Success    ".Trim().ToUpper());
 }
 `
-	kb, wm := prepareTestKnowledgeBase(t, data)
+	kb, wm := prepareV3TestKnowledgeBase(t, data)
 	err := dctx.Add("DEFUNC", &ast.BuiltInFunctions{
 		Knowledge:     kb,
 		WorkingMemory: wm,
@@ -321,7 +337,7 @@ rule RuleOne "RuleOneDesc" salience 123 {
 	assert.NoError(t, err)
 }
 
-func TestRuleRetract(t *testing.T) {
+func TestV3RuleRetract(t *testing.T) {
 	// logrus.SetLevel(logrus.InfoLevel)
 	dctx := ast.NewDataContext()
 
@@ -334,7 +350,7 @@ rule RuleOne "RuleOneDesc" salience 123 {
 }
 `
 
-	kb, wm := prepareTestKnowledgeBase(t, data)
+	kb, wm := prepareV3TestKnowledgeBase(t, data)
 	err := dctx.Add("DEFUNC", &ast.BuiltInFunctions{
 		Knowledge:     kb,
 		WorkingMemory: wm,
@@ -358,7 +374,7 @@ rule RuleOne "RuleOneDesc" salience 123 {
 	assert.False(t, kb.RuleEntries["RuleOne"].Retracted)
 }
 
-func TestRuleAssignment(t *testing.T) {
+func TestV3RuleAssignment(t *testing.T) {
 	// logrus.SetLevel(logrus.TraceLevel)
 	dctx := ast.NewDataContext()
 
@@ -371,7 +387,7 @@ rule RuleOne "RuleOneDesc" salience 123 {
 }
 `
 
-	kb, wm := prepareTestKnowledgeBase(t, data)
+	kb, wm := prepareV3TestKnowledgeBase(t, data)
 	err := dctx.Add("DEFUNC", &ast.BuiltInFunctions{
 		Knowledge:     kb,
 		WorkingMemory: wm,

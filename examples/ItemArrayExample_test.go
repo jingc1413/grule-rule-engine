@@ -1,10 +1,24 @@
+//  Copyright hyperjumptech/grule-rule-engine Authors
+//
+//  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+//  Unless required by applicable law or agreed to in writing, software
+//  distributed under the License is distributed on an "AS IS" BASIS,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//  See the License for the specific language governing permissions and
+//  limitations under the License.
+
 package examples
 
 import (
 	"fmt"
 	"github.com/antlr/antlr4/runtime/Go/antlr"
 	antlr2 "github.com/hyperjumptech/grule-rule-engine/antlr"
-	parser2 "github.com/hyperjumptech/grule-rule-engine/antlr/parser/grulev2"
+	parser3 "github.com/hyperjumptech/grule-rule-engine/antlr/parser/grulev3"
 	"github.com/hyperjumptech/grule-rule-engine/ast"
 	"github.com/hyperjumptech/grule-rule-engine/builder"
 	"github.com/hyperjumptech/grule-rule-engine/engine"
@@ -171,7 +185,7 @@ func TestItemPriceChecker_TestLexer(t *testing.T) {
 	is := antlr.NewInputStream(PriceCheckRule1)
 
 	// Create the Lexer
-	lexer := parser2.Newgrulev2Lexer(is)
+	lexer := parser3.Newgrulev3Lexer(is)
 	//lexer := parser.NewLdifParserLexer(is)
 
 	// Read all tokens
@@ -187,18 +201,18 @@ func TestItemPriceChecker_TestLexer(t *testing.T) {
 func TestItemPriceChecker_TestParser(t *testing.T) {
 	nis := antlr.NewInputStream(PriceCheckRule1)
 
-	lexer := parser2.Newgrulev2Lexer(nis)
+	lexer := parser3.Newgrulev3Lexer(nis)
 	stream := antlr.NewCommonTokenStream(lexer, antlr.TokenDefaultChannel)
 
 	lib := ast.NewKnowledgeLibrary()
 	kb := lib.GetKnowledgeBase("Test", "0.1.1")
 
 	var parseError error
-	listener := antlr2.NewGruleV2ParserListener(kb, func(e error) {
+	listener := antlr2.NewGruleV3ParserListener(kb, func(e error) {
 		parseError = e
 	})
 
-	psr := parser2.Newgrulev2Parser(stream)
+	psr := parser3.Newgrulev3Parser(stream)
 	psr.BuildParseTrees = true
 	antlr.ParseTreeWalkerDefault.Walk(listener, psr.Grl())
 	assert.NoError(t, parseError)

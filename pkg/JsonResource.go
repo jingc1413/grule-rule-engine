@@ -1,3 +1,17 @@
+//  Copyright hyperjumptech/grule-rule-engine Authors
+//
+//  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+//  Unless required by applicable law or agreed to in writing, software
+//  distributed under the License is distributed on an "AS IS" BASIS,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//  See the License for the specific language governing permissions and
+//  limitations under the License.
+
 package pkg
 
 import (
@@ -104,6 +118,17 @@ func ParseJSONRuleset(data []byte) (rs string, err error) {
 		sb.WriteString(parseRule(&rules[i]))
 	}
 	rs = sb.String()
+	return
+}
+
+// ParseRule Accepts a struct of GruleJSON rule and returns the parsed string of GRule.
+func ParseRule(rule *GruleJSON) (r string, err error) {
+	defer func() {
+		if x := recover(); x != nil {
+			err = fmt.Errorf("%v", x)
+		}
+	}()
+	r = parseRule(rule)
 	return
 }
 
@@ -224,7 +249,7 @@ func buildExpressionEx(input map[string]interface{}, depth int) (string, bool) {
 			case string:
 				return strconv.Quote(x), true
 			case float64:
-				return fmt.Sprint(x), true
+				return strconv.FormatFloat(x, 'f', -1, 64), true
 			case bool:
 				if x {
 					return "true", true

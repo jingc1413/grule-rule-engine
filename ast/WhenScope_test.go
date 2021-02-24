@@ -1,3 +1,17 @@
+//  Copyright hyperjumptech/grule-rule-engine Authors
+//
+//  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+//  Unless required by applicable law or agreed to in writing, software
+//  distributed under the License is distributed on an "AS IS" BASIS,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//  See the License for the specific language governing permissions and
+//  limitations under the License.
+
 package ast
 
 import (
@@ -15,8 +29,8 @@ func TestNewWhenScope(t *testing.T) {
 
 	expr1 := &Expression{
 		AstID:           "abc",
-		LeftExpression:  &Expression{ExpressionAtom: &ExpressionAtom{Variable: &Variable{Constant: &Constant{Value: reflect.ValueOf("Whooho")}}}},
-		RightExpression: &Expression{ExpressionAtom: &ExpressionAtom{Variable: &Variable{Constant: &Constant{Value: reflect.ValueOf("Whooho")}}}},
+		LeftExpression:  &Expression{ExpressionAtom: &ExpressionAtom{Constant: &Constant{Value: reflect.ValueOf("Whooho")}}},
+		RightExpression: &Expression{ExpressionAtom: &ExpressionAtom{Constant: &Constant{Value: reflect.ValueOf("Whooho")}}},
 		Operator:        OpEq,
 	}
 
@@ -46,10 +60,8 @@ func TestNewWhenScopeEvaluate(t *testing.T) {
 		AstID: "abc",
 		SingleExpression: &Expression{
 			ExpressionAtom: &ExpressionAtom{
-				Variable: &Variable{
-					Constant: &Constant{
-						Value: reflect.ValueOf(123),
-					},
+				Constant: &Constant{
+					Value: reflect.ValueOf(123),
 				},
 			},
 		},

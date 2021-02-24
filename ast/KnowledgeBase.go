@@ -1,9 +1,22 @@
+//  Copyright hyperjumptech/grule-rule-engine Authors
+//
+//  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+//  Unless required by applicable law or agreed to in writing, software
+//  distributed under the License is distributed on an "AS IS" BASIS,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//  See the License for the specific language governing permissions and
+//  limitations under the License.
+
 package ast
 
 import (
 	"bytes"
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"sort"
 	"strings"
 	"sync"
@@ -48,11 +61,11 @@ func (lib *KnowledgeLibrary) NewKnowledgeBaseInstance(name, version string) *Kno
 	if ok {
 		newClone := kb.Clone(pkg.NewCloneTable())
 		if kb.IsIdentical(newClone) {
-			logrus.Debugf("Successfully create instance [%s:%s]", newClone.Name, newClone.Version)
+			AstLog.Debugf("Successfully create instance [%s:%s]", newClone.Name, newClone.Version)
 			return newClone
 		}
-		logrus.Fatalf("ORIGIN   : %s", kb.GetSnapshot())
-		logrus.Fatalf("CLONE    : %s", newClone.GetSnapshot())
+		AstLog.Fatalf("ORIGIN   : %s", kb.GetSnapshot())
+		AstLog.Fatalf("CLONE    : %s", newClone.GetSnapshot())
 		panic("The clone is not identical")
 	}
 	return nil
@@ -123,10 +136,10 @@ func (e *KnowledgeBase) Clone(cloneTable *pkg.CloneTable) *KnowledgeBase {
 func (e *KnowledgeBase) AddRuleEntry(entry *RuleEntry) error {
 	e.lock.Lock()
 	defer e.lock.Unlock()
-	if e.ContainsRuleEntry(entry.RuleName.SimpleName) {
-		return fmt.Errorf("rule entry %s already exist", entry.RuleName.SimpleName)
+	if e.ContainsRuleEntry(entry.RuleName) {
+		return fmt.Errorf("rule entry %s already exist", entry.RuleName)
 	}
-	e.RuleEntries[entry.RuleName.SimpleName] = entry
+	e.RuleEntries[entry.RuleName] = entry
 	return nil
 }
 
@@ -153,7 +166,7 @@ func (e *KnowledgeBase) InitializeContext(dataCtx IDataContext) {
 // RetractRule will retract the selected rule for execution on the next cycle.
 func (e *KnowledgeBase) RetractRule(ruleName string) {
 	for _, re := range e.RuleEntries {
-		if re.RuleName.SimpleName == ruleName {
+		if re.RuleName == ruleName {
 			re.Retracted = true
 		}
 	}
@@ -162,7 +175,7 @@ func (e *KnowledgeBase) RetractRule(ruleName string) {
 // IsRuleRetracted will check if a certain rule denoted by its rule name is currently retracted
 func (e *KnowledgeBase) IsRuleRetracted(ruleName string) bool {
 	for _, re := range e.RuleEntries {
-		if re.RuleName.SimpleName == ruleName {
+		if re.RuleName == ruleName {
 			return re.Retracted
 		}
 	}

@@ -1,12 +1,26 @@
+//  Copyright hyperjumptech/grule-rule-engine Authors
+//
+//  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+//  Unless required by applicable law or agreed to in writing, software
+//  distributed under the License is distributed on an "AS IS" BASIS,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//  See the License for the specific language governing permissions and
+//  limitations under the License.
+
 package ast
 
 import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/hyperjumptech/grule-rule-engine/ast/unique"
 	"reflect"
 
-	"github.com/google/uuid"
 	"github.com/hyperjumptech/grule-rule-engine/pkg"
 )
 
@@ -46,7 +60,7 @@ const (
 // NewExpression creates new Expression instance
 func NewExpression() *Expression {
 	return &Expression{
-		AstID:    uuid.New().String(),
+		AstID:    unique.NewID(),
 		Operator: 0,
 	}
 }
@@ -61,6 +75,7 @@ type Expression struct {
 	SingleExpression *Expression
 	ExpressionAtom   *ExpressionAtom
 	Operator         int
+	Negated          bool
 	Value            reflect.Value
 
 	Evaluated bool
@@ -69,9 +84,10 @@ type Expression struct {
 // Clone will clone this Expression. The new clone will have an identical structure
 func (e *Expression) Clone(cloneTable *pkg.CloneTable) *Expression {
 	clone := &Expression{
-		AstID:    uuid.New().String(),
+		AstID:    unique.NewID(),
 		GrlText:  e.GrlText,
 		Operator: e.Operator,
+		Negated:  e.Negated,
 	}
 
 	if e.LeftExpression != nil {
@@ -100,6 +116,7 @@ func (e *Expression) Clone(cloneTable *pkg.CloneTable) *Expression {
 		} else {
 			cloned := e.SingleExpression.Clone(cloneTable)
 			clone.SingleExpression = cloned
+			clone.Negated = e.Negated
 			cloneTable.MarkCloned(e.SingleExpression.AstID, cloned.AstID, e.SingleExpression, cloned)
 		}
 	}
@@ -159,6 +176,9 @@ func (e *Expression) GetSnapshot() string {
 	buff.WriteString("(")
 	if e.SingleExpression != nil {
 		buff.WriteString("SE(")
+		if e.Negated {
+			buff.WriteString("!")
+		}
 		buff.WriteString(e.SingleExpression.GetSnapshot())
 		buff.WriteString(")")
 	}
@@ -236,12 +256,45 @@ func (e *Expression) Evaluate(dataContext IDataContext, memory *WorkingMemory) (
 		val, err := e.SingleExpression.Evaluate(dataContext, memory)
 		if err == nil {
 			e.Value = val
+			if e.Negated {
+				if e.Value.Kind() == reflect.Bool {
+					e.Value = reflect.ValueOf(!e.Value.Bool())
+				} else {
+					AstLog.Warnf("Expression \"%s\" is a negation to non boolean value, negation is ignored.", e.SingleExpression.GrlText)
+				}
+			}
 			e.Evaluated = true
 		}
-		return val, err
+		return e.Value, err
 	}
 	if e.LeftExpression != nil && e.RightExpression != nil {
+		var val reflect.Value
+		var opErr error
+
 		lval, lerr := e.LeftExpression.Evaluate(dataContext, memory)
+		if e.Operator == OpAnd {
+			if lerr != nil {
+				return reflect.Value{}, fmt.Errorf("left hand expression error. got %v", lerr)
+			}
+			val, opErr = pkg.EvaluateLogicSingle(lval)
+			if opErr == nil && !val.Bool() {
+				e.Value = val
+				e.Evaluated = true
+				return val, opErr
+			}
+		}
+		if e.Operator == OpOr {
+			if lerr != nil {
+				return reflect.Value{}, fmt.Errorf("left hand expression error. got %v", lerr)
+			}
+			val, opErr = pkg.EvaluateLogicSingle(lval)
+			if opErr == nil && val.Bool() {
+				e.Value = val
+				e.Evaluated = true
+				return val, opErr
+			}
+		}
+
 		rval, rerr := e.RightExpression.Evaluate(dataContext, memory)
 		if lerr != nil {
 			return reflect.Value{}, fmt.Errorf("left hand expression error. got %v", lerr)
@@ -249,9 +302,6 @@ func (e *Expression) Evaluate(dataContext IDataContext, memory *WorkingMemory) (
 		if rerr != nil {
 			return reflect.Value{}, fmt.Errorf("right hand expression error.  got %v", rerr)
 		}
-
-		var val reflect.Value
-		var opErr error
 
 		switch e.Operator {
 		case OpMul:
